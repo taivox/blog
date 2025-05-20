@@ -8,9 +8,9 @@ At the same time, Upbound implemented a policy restricting free users to pulling
 
 For Kubernetes-based infrastructure with frequent scaling operations and spot instance usage, these policy changes presented significant operational risks. Our analysis indicated that clients would exceed these limitations within minutes during standard operations:
 
-- A cluster with 20 nodes requiring 5 images each = 100 pulls
-- Node replacements resulting from spot instance recycling = additional pulls for new nodes
-- GitLab CI/CD pipelines on Kubernetes runners = further pulls against the quota
+- A cluster with 20 nodes requiring 5 images each = 100 pulls.
+- Node replacements resulting from spot instance recycling = additional pulls for new nodes.
+- GitLab CI/CD pipelines on Kubernetes runners = further pulls against the quota.
 
 While Docker Hub had not yet fully enforced their policy, it was clear that proactive measures were necessary to prevent potential disruptions to critical infrastructure services.
 
@@ -18,10 +18,10 @@ While Docker Hub had not yet fully enforced their policy, it was clear that proa
 
 After analyzing the situation, we established several key requirements for an effective solution:
 
-1. Implement a workaround for the newly imposed rate limitations from Docker Hub
-2. Ensure continuous access to specific Crossplane package versions regardless of upstream restrictions
-3. Enhance infrastructure resilience against external registry service disruptions
-4. Develop a solution that can be implemented across multiple cloud providers
+1. Implement a workaround for the newly imposed rate limitations from Docker Hub.
+2. Ensure continuous access to specific Crossplane package versions regardless of upstream restrictions.
+3. Enhance infrastructure resilience against external registry service disruptions.
+4. Develop a solution that can be implemented across multiple cloud providers.
 
 Additionally, any implemented solution needed to maintain transparency to client applications and minimize operational overhead for infrastructure teams.
 
