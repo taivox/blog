@@ -39,6 +39,138 @@ This approach provides three primary benefits:
 
 For AWS environments, we leveraged Amazon ECR's pull-through cache functionality to automatically retrieve and store images from upstream registries upon initial request:
 
+```terraform
+variable "hub_username" {
+  type = string
+  sensitive   = true
+  default = ""
+}
+
+variable "hub_token" {
+  type = string
+  sensitive   = true
+  default = ""
+}
+
+variable "ghcr_username" {
+  type = string
+  sensitive   = true
+  default = ""
+}
+
+variable "ghcr_token" {
+  type = string
+  sensitive   = true
+  default = ""
+}
+
+data "aws_region" "this" {}
+data "aws_caller_identity" "this" {}
+
+locals {
+  hub = {
+    username = var.hub_username
+    accessToken = var.hub_token
+  }
+  ghcr = {
+    username = var.ghcr_username
+    accessToken = var.ghcr_token
+  }
+}
+
+resource "aws_secretsmanager_secret" "ecr_proxy_hub" {
+  count = var.hub_username != "" && var.hub_token != "" ? 1 : 0
+  name = "hub-proxy"
+}
+
+resource "aws_secretsmanager_secret_version" "ecr_proxy_hub" {
+  count = var.hub_username != "" && var.hub_token != "" ? 1 : 0
+  secret_id     = aws_secretsmanager_secret.ecr_proxy_hub[0].id
+  secret_string = jsonencode(local.hub)
+}
+
+resource "aws_secretsmanager_secret" "ecr_proxy_ghcr" {
+  count = var.ghcr_username != "" && var.ghcr_token != "" ? 1 : 0
+  name = "ecr-pullthroughcache/ghcr"
+}
+
+resource "aws_secretsmanager_secret_version" "ecr_proxy_ghcr" {
+  count = var.ghcr_username != "" && var.ghcr_token != "" ? 1 : 0
+  secret_id     = aws_secretsmanager_secret.ecr_proxy_ghcr[0].id
+  secret_string = jsonencode(local.ghcr)
+}
+
+resource "aws_ecr_pull_through_cache_rule" "hub" {
+  count = var.hub_username != "" && var.hub_token != "" ? 1 : 0
+  ecr_repository_prefix = "ecr-proxy-hub"
+  upstream_registry_url = "registry-1.docker.io"
+  credential_arn        = aws_secretsmanager_secret.ecr_pullthroughcache_hub[0].arn
+  depends_on = [
+    aws_secretsmanager_secret_version.ecr_pullthroughcache_hub
+  ]
+}
+
+resource "aws_ecr_pull_through_cache_rule" "ghcr" {
+  count = var.ghcr_username != "" && var.ghcr_token != "" ? 1 : 0
+  ecr_repository_prefix = "ecr-proxy-ghcr"
+  upstream_registry_url = "ghcr.io"
+  credential_arn        = aws_secretsmanager_secret.ecr_pullthroughcache_ghcr[0].arn
+  depends_on = [
+    aws_secretsmanager_secret_version.ecr_pullthroughcache_ghcr
+  ]
+}
+
+resource "aws_ecr_repository_creation_template" "ecr_proxy" {
+  for_each = toset(["hub", "ghcr"])
+  prefix               = each.value
+  description          = each.value
+  applied_for = [
+    "PULL_THROUGH_CACHE",
+  ]
+}
+
+resource "aws_iam_policy" "ecr_proxy" {
+  name        = "ecr-proxy"
+  path        = "/"
+  description = "ECR usage"
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Action = [
+                "ecr:GetAuthorizationToken",
+                "ecr:BatchCheckLayerAvailability",
+                "ecr:GetDownloadUrlForLayer",
+                "ecr:DescribeRepositories",
+                "ecr:ListImages",
+                "ecr:DescribeImages",
+                "ecr:BatchGetImage",
+                "ecr:ListTagsForResource",
+                "ecr:DescribeImageScanFindings",
+                "ecr:ReplicateImage",
+                "ecr:CreateRepository",
+                "ecr:BatchImportUpstreamImage",
+                "ecr:TagResource"
+        ]
+        Effect   = "Allow"
+        Resource = "arn:aws:ecr:${data.aws_region.this.name}:${data.aws_caller_identity.this.account_id}:repository/*"
+      },
+    ]
+  })
+}
+
+output "hub_registry" {
+  description = "Registry URL for docker hub"
+  value       = var.hub_username != "" && var.hub_token != "" ? "${data.aws_caller_identity.this.account_id}.dkr.ecr.${data.aws_region.this.name}.amazonaws.com/${aws_ecr_pull_through_cache_rule.hub[0].ecr_repository_prefix}" : null
+}
+
+output "ghcr_registry" {
+  description = "Registry URL for ghcr"
+  value       = var.ghcr_username != "" && var.ghcr_token != "" ? "${data.aws_caller_identity.this.account_id}.dkr.ecr.${data.aws_region.this.name}.amazonaws.com/${aws_ecr_pull_through_cache_rule.ghcr[0].ecr_repository_prefix}" : null
+}
+
+```
+
 ### Google Artifact Registry remote repository configuration example
 
 For Google Cloud environments, we configured Artifact Registry to establish remote repositories functioning as proxies for Docker Hub:
