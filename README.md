@@ -1,4 +1,4 @@
-# Mitigating Docker Hub rate limitations and Crossplane package restrictions with registry proxies
+## Mitigating Docker Hub rate limitations and Crossplane package restrictions with registry proxies
 
 ### The Challenge
 
