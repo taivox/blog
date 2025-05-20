@@ -39,29 +39,6 @@ This approach provides three primary benefits:
 
 For AWS environments, we leveraged Amazon ECR's pull-through cache functionality to automatically retrieve and store images from upstream registries upon initial request:
 
-```terraform
-# Initialize a secret to store Docker Hub authentication credentials
-resource "aws_secretsmanager_secret" "docker_hub_creds" {
-  name = "ecr-pullthroughcache/docker-hub"
-}
-
-# Store the Docker Hub authentication parameters
-resource "aws_secretsmanager_secret_version" "docker_hub_creds_version" {
-  secret_id     = aws_secretsmanager_secret.docker_hub_creds.id
-  secret_string = jsonencode({
-    username    = var.docker_hub_username
-    accessToken = var.docker_hub_access_token
-  })
-}
-
-# Establish the pull-through cache configuration
-resource "aws_ecr_pull_through_cache_rule" "docker_hub" {
-  ecr_repository_prefix = "docker-hub"
-  upstream_registry_url = "registry-1.docker.io"
-  credential_arn        = aws_secretsmanager_secret.docker_hub_creds.arn
-}
-```
-
 ### Google Artifact Registry remote repository configuration example
 
 For Google Cloud environments, we configured Artifact Registry to establish remote repositories functioning as proxies for Docker Hub:
