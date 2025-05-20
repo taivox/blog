@@ -33,7 +33,7 @@ Registry proxies act as intermediaries between your infrastructure and external 
 2. **Improved resilience** - Your infrastructure continues working even during external registry outages
 3. **Version preservation** - Access specific Crossplane package versions even after restrictions
 
-#### AWS ECR Pull-Through Cache Implementation
+#### AWS ECR pull-through cache implementation
 
 Amazon ECR's pull-through cache functionality was configured to automatically retrieve and store images from upstream registries upon initial request:
 
@@ -60,7 +60,7 @@ resource "aws_ecr_pull_through_cache_rule" "docker_hub" {
 }
 ```
 
-#### Google Artifact Registry Remote Repository Configuration
+#### Google Artifact Registry remote repository configuration
 
 We implemented Google Cloud's Artifact Registry to establish remote repositories that function as proxies for Docker Hub:
 
@@ -87,7 +87,7 @@ resource "google_artifact_registry_repository" "docker_hub_proxy" {
 }
 ```
 
-#### Kubernetes Manifest Updates
+#### Kubernetes manifest updates
 
 We modified our Helm charts to reference container images through our established proxies:
 
