@@ -2,11 +2,11 @@
 
 ### The Challenge
 
-In early 2025, Docker Hub announced a significant policy change: free users would be limited to 10 image pulls per hour starting April 1st. This wasn't an April Fool's joke but a real constraint affecting developers worldwide. Read more [here](https://www.docker.com/blog/revisiting-docker-hub-policies-prioritizing-developer-experience).
+In early 2025, Docker Hub announced a significant policy change: free users would be limited to 10 image pulls per hour starting April 1st. This represented a substantial constraint for development and production environments worldwide. Read more [here](https://www.docker.com/blog/revisiting-docker-hub-policies-prioritizing-developer-experience).
 
-Around the same time, Upbound revealed that free users could only pull the latest Crossplane package versions as of March 25th, preventing access to specific older versions that many workflows depend on. Read more [here](https://docs.upbound.io/providers/policies/#access).
+Around the same time, Upbound revealed that free users could only pull the latest Crossplane package versions as of March 25th, thereby limiting access to older versions that many workflows depend upon. Read more [here](https://docs.upbound.io/providers/policies/#access).
 
-For our Kubernetes-based environments with frequent scaling and spot instances, these policies spelled serious trouble. Our analysis indicated that clients would exceed these limitations almost immediately during standard operations:
+For our Kubernetes-based infrastructure environments with frequent scaling operations and spot instance usage, these policy implementations presented considerable operational challenges. Our analysis indicated that clients would exceed these limitations almost immediately during standard operations:
 
 - A cluster with 20 nodes requiring 5 images each = 100 pulls
 - Node replacements resulting from spot instance recycling = additional pulls for new nodes
@@ -86,6 +86,8 @@ resource "google_artifact_registry_repository" "docker_hub_proxy" {
   }
 }
 ```
+
+It's important to note that our implementation extends beyond Docker Hub to include proxies for other critical container registries such as Quay.io and GitHub Container Registry (ghcr.io).
 
 #### Kubernetes manifest updates
 
