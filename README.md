@@ -4,7 +4,7 @@
 
 In early 2025, Docker Hub announced a significant policy change: free users would be limited to 10 image pulls per hour starting April 1st. This change introduced substantial constraints for development and production environments worldwide. More details can be found in [Docker's official announcement](https://www.docker.com/blog/revisiting-docker-hub-policies-prioritizing-developer-experience).
 
-Concurrently, Upbound implemented a policy restricting free users to pulling only the latest Crossplane package versions as of March 25th, limiting access to older versions that many production workflows depend upon. The policy is documented in [Upbound's official documentation](https://docs.upbound.io/providers/policies/#access).
+At the same time, Upbound implemented a policy restricting free users to pulling only the latest Crossplane package versions as of March 25th, limiting access to older versions that many production workflows depend upon. The policy is documented in [Upbound's official documentation](https://docs.upbound.io/providers/policies/#access).
 
 For Kubernetes-based infrastructure with frequent scaling operations and spot instance usage, these policy changes presented significant operational risks. Our analysis indicated that clients would exceed these limitations within minutes during standard operations:
 
@@ -62,7 +62,7 @@ resource "aws_ecr_pull_through_cache_rule" "docker_hub" {
 }
 ```
 
-### Google Artifact Registry Remote Repository Configuration
+### Google Artifact Registry remote repository configuration example
 
 For Google Cloud environments, we configured Artifact Registry to establish remote repositories functioning as proxies for Docker Hub:
 
