@@ -94,7 +94,7 @@ We modified our Helm charts to reference container images through our establishe
 **AWS ECR reference format:**
 
 ```
-<account-id>.dkr.ecr.<region>.amazonaws.com/docker-hub/nginx:latest
+<account-id>.dkr.ecr.<region>.amazonaws.com/hub-proxy/nginx:latest
 ```
 
 **Google Artifact Registry reference format:**
