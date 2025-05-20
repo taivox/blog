@@ -31,9 +31,9 @@ Our engineering team designed and implemented a registry proxy architecture that
 
 This approach provides three primary benefits:
 
-1. **Rate limit circumvention** - All subsequent pulls come from the local proxy, not directly from Docker Hub
-2. **Enhanced resilience** - Infrastructure continues operating even during external registry outages
-3. **Version preservation** - Critical services maintain access to specific Crossplane package versions despite upstream restrictions
+1. **Rate limit circumvention** - All subsequent pulls come from the local proxy, not directly from Docker Hub.
+2. **Enhanced resilience** - Infrastructure continues operating even during external registry outages.
+3. **Version preservation** - Critical services maintain access to specific Crossplane package versions despite upstream restrictions.
 
 ### AWS ECR pull-through cache implementation
 
