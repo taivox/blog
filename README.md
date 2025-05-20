@@ -1,11 +1,10 @@
-## Implementation Considerations
+## The Growing Registry Challenge
 
-When implementing registry proxies, consider these important factors:
+In early 2025, Docker Hub announced a significant change: free users would be limited to just 10 image pulls per hour starting April 1st. Around the same time, Upbound revealed that free users could only pull the latest Crossplane package versions as of March 25th.
 
-- **Authentication**: Ensure your proxies have the necessary credentials to access private repositories in the upstream registry
-- **Storage costs**: Cached images consume storage space, so monitor usage and implement lifecycle policies if needed
-- **Image scanning**: Configure vulnerability scanning on your proxy registry to maintain security
-- **Multiple registries**: Consider creating proxies for other common registries besides Docker Hub (like Quay.io or GitHub Container Registry)
+For Kubernetes environments with frequent scaling and spot instances, these restrictions create a serious operational risk. A single node scaling event could exhaust your pull quota almost instantly, leaving your infrastructure unable to pull images for hours.
+
+Why is this happening? Container registries face increasing costs as free usage grows. While these policy changes help providers remain sustainable, they create new challenges for development teams who need to maintain reliable infrastructure.
 
 ## Conclusion
 
@@ -16,14 +15,6 @@ For our Kubernetes clients with frequent scaling and spot instances, implementin
 Setting up these proxies might take some initial effort, but the long-term operational benefits make it well worth the investment. Don't wait until rate limits become a production issue – start implementing your registry proxy strategy today!
 
 _This post was written by the Platform Engineering team at Entigo, building resilient infrastructure for modern applications._# Dodge Docker's Rate Limits: Set Up Registry Proxies in Minutes
-
-## The Growing Registry Challenge
-
-In early 2025, Docker Hub announced a significant change: free users would be limited to just 10 image pulls per hour starting April 1st. Around the same time, Upbound revealed that free users could only pull the latest Crossplane package versions as of March 25th.
-
-For Kubernetes environments with frequent scaling and spot instances, these restrictions create a serious operational risk. A single node scaling event could exhaust your pull quota almost instantly, leaving your infrastructure unable to pull critical images for hours.
-
-Why is this happening? Container registries face increasing costs as free usage grows. While these policy changes help providers remain sustainable, they create new challenges for development teams who need to maintain reliable infrastructure.
 
 ## The Solution: Registry Proxies
 
@@ -121,3 +112,20 @@ Registry proxies provide advantages that extend far beyond just avoiding rate li
 4. **Version locking** - Protect against upstream changes or removals of images
 
 For Crossplane users, this approach is particularly valuable, as it preserves access to specific package versions that might otherwise become inaccessible due to Upbound's new policies.
+
+## Implementation Considerations
+
+When implementing registry proxies, consider these important factors:
+
+- **Authentication**: Ensure your proxies have the necessary credentials to access private repositories in the upstream registry
+- **Storage costs**: Cached images consume storage space, so monitor usage and implement lifecycle policies if needed
+- **Image scanning**: Configure vulnerability scanning on your proxy registry to maintain security
+- **Multiple registries**: Consider creating proxies for other common registries besides Docker Hub (like Quay.io or GitHub Container Registry)
+## Implementation Considerations
+
+When implementing registry proxies, consider these important factors:
+
+- **Authentication**: Ensure your proxies have the necessary credentials to access private repositories in the upstream registry
+- **Storage costs**: Cached images consume storage space, so monitor usage and implement lifecycle policies if needed
+- **Image scanning**: Configure vulnerability scanning on your proxy registry to maintain security
+- **Multiple registries**: Consider creating proxies for other common registries besides Docker Hub (like Quay.io or GitHub Container Registry)
