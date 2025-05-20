@@ -10,7 +10,7 @@ For our Kubernetes-based environments with frequent scaling and spot instances, 
 
 - A cluster with 20 nodes requiring 5 images each = 100 pulls
 - Node replacements resulting from spot instance recycling = additional pulls for new nodes
-- CI/CD pipeline test executions = further pulls against the quota
+- GitLab CI/CD pipelines on Kubernetes runners = further pulls against the quota
 
 While Docker Hub had not yet enforced their policy, it appeared to be an imminent change that could potentially disrupt critical infrastructure services.
 
