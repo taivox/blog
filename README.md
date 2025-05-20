@@ -301,6 +301,6 @@ Our registry proxy implementation delivered several business and operational ben
 
 ## Conclusion
 
-While the initial implementation required configuration effort across our clients' multi-cloud environments, the solution has substantially improved operational reliability by eliminating external registry dependencies and rate limitations.
+While the initial implementation required configuration effort across our clients' infrastructure across multiple cloud providers, the solution has substantially improved operational reliability by eliminating external registry dependencies and rate limitations.
 
 This project demonstrates how proactive infrastructure engineering can transform potential business disruptions into opportunities for enhanced reliability and performance.
