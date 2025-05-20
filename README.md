@@ -67,26 +67,93 @@ resource "aws_ecr_pull_through_cache_rule" "docker_hub" {
 For Google Cloud environments, we configured Artifact Registry to establish remote repositories functioning as proxies for Docker Hub:
 
 ```terraform
-# Create a remote repository configuration in Google Artifact Registry
-resource "google_artifact_registry_repository" "docker_hub_proxy" {
-  location      = var.region
-  repository_id = "docker-hub-proxy"
+variable "hub_username_secret" {
+  description = "Secret Manager secret name for Docker Hub username"
+  type        = string
+  default     = ""
+}
+
+variable "hub_access_token_secret" {
+  description = "Secret Manager secret name for Docker Hub access token"
+  type        = string
+  default     = ""
+}
+
+variable "ghcr_username_secret" {
+  description = "Secret Manager secret name for GitHub Container Registry username"
+  type        = string
+  default     = ""
+}
+
+variable "ghcr_access_token_secret" {
+  description = "Secret Manager secret name for GitHub Container Registry access token"
+  type        = string
+  default     = ""
+}
+
+data "google_project" "this" {}
+
+data "google_client_config" "this" {}
+
+data "google_secret_manager_secret_version_access" "gar_proxy_username" {
+  for_each = local.registries_with_credentials
+  secret   = each.value.username_secret
+}
+
+data "google_secret_manager_secret_version_access" "gar_proxy_access_token" {
+  for_each = local.registries_with_credentials
+  secret   = each.value.access_token_secret
+}
+
+locals {
+  registries = {
+    hub  = { uri = "registry-1.docker.io", username_secret = var.hub_username_secret, access_token_secret = var.hub_access_token_secret }
+    ghcr = { uri = "ghcr.io", username_secret = var.ghcr_username_secret, access_token_secret = var.ghcr_access_token_secret }
+  }
+  registries_with_credentials = { for k, v in local.registries : k => v if v.username_secret != "" && v.access_token_secret != "" }
+}
+
+resource "google_secret_manager_secret_iam_member" "gar_proxy" {
+  for_each  = local.registries_with_credentials
+  secret_id = each.value.access_token_secret
+  role      = "roles/secretmanager.secretAccessor"
+  member    = "serviceAccount:service-${data.google_project.this.number}@gcp-sa-artifactregistry.iam.gserviceaccount.com"
+}
+
+resource "google_artifact_registry_repository" "gar_proxy" {
+  for_each      = local.registries
+  depends_on    = [google_secret_manager_secret_iam_member.gar_proxy]
+  repository_id = each.key
   format        = "DOCKER"
   mode          = "REMOTE_REPOSITORY"
 
-  # Define the remote repository configuration for Docker Hub
   remote_repository_config {
-    description = "Docker Hub proxy repository"
-    docker_repository {
-      public_repository = "DOCKER_HUB"
+    common_repository {
+      uri = "https://${each.value.uri}"
     }
-    # Configure Docker Hub authentication credentials
-    upstream_credentials {
-      username               = var.docker_hub_username
-      password_secret_version = google_secret_manager_secret.docker_hub_token.id
+
+    dynamic "upstream_credentials" {
+      for_each = each.value.username_secret != "" && each.value.access_token_secret != "" ? [1] : []
+      content {
+        username_password_credentials {
+          username                = data.google_secret_manager_secret_version_access.gar_proxy_username[each.key].secret_data
+          password_secret_version = data.google_secret_manager_secret_version_access.gar_proxy_access_token[each.key].name
+        }
+      }
     }
   }
 }
+
+output "hub_registry" {
+  description = "Docker Hub proxy "
+  value = "${data.google_client_config.this.region}-docker.pkg.dev/${data.google_client_config.this.project}/${google_artifact_registry_repository.gar_proxy["hub"].repository_id}"
+}
+
+output "ghcr_registry" {
+  description = "GitHub Container Registry proxy"
+  value = "${data.google_client_config.this.region}-docker.pkg.dev/${data.google_client_config.this.project}/${google_artifact_registry_repository.gar_proxy["ghcr"].repository_id}"
+}
+
 ```
 
 Our implementation extends beyond Docker Hub to include proxies for other critical container registries such as Quay.io, GitHub Container Registry (ghcr.io). This comprehensive approach ensures protection against rate limits and service disruptions.
