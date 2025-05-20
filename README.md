@@ -2,7 +2,7 @@
 
 ## The Challenge
 
-In early 2025, Docker Hub announced a significant policy change: free users would be limited to 10 image pulls per hour starting April 1st. This change introduced substantial constraints for development and production environments worldwide. More details can be found in [Docker's official announcement](https://www.docker.com/blog/revisiting-docker-hub-policies-prioritizing-developer-experience).
+In early 2025, Docker Hub announced a significant policy change: unauthenticated users would be limited to 10 image pulls per hour starting April 1st. This change introduced substantial constraints for development and production environments worldwide. Although the policy was not enforced, it was clear that it would be reinstated at some point in the future. More details can be found in [Docker's official announcement](https://www.docker.com/blog/revisiting-docker-hub-policies-prioritizing-developer-experience).
 
 At the same time, Upbound implemented a policy restricting free users to pulling only the latest Crossplane package versions as of March 25th, limiting access to older versions that many production workflows depend upon. The policy is documented in [Upbound's official documentation](https://docs.upbound.io/providers/policies/#access).
 
@@ -18,7 +18,7 @@ While Docker Hub had not yet fully enforced their policy, it was clear that proa
 
 After analyzing the situation, we established several key requirements for an effective solution:
 
-1. Implement a strategy to circumvent the newly imposed rate limitations from Docker Hub
+1. Implement a workaround for the newly imposed rate limitations from Docker Hub
 2. Ensure continuous access to specific Crossplane package versions regardless of upstream restrictions
 3. Enhance infrastructure resilience against external registry service disruptions
 4. Develop a solution that can be implemented across multiple cloud providers
@@ -176,7 +176,7 @@ We updated Helm charts and Kubernetes manifests to reference container images th
 
 For Crossplane packages, which are essentially OCI-compliant Docker images, we established equivalent proxy configurations and updated the package references accordingly.
 
-## Measured Outcomes
+## Measured outcomes
 
 Our registry proxy implementation delivered several business and operational benefits:
 
@@ -186,7 +186,7 @@ Our registry proxy implementation delivered several business and operational ben
 
 3. **Improved service resilience** - During Docker Hub outages, our clients' infrastructure continued to operate without disruption, maintaining critical business services.
 
-4. **Enhanced performance** - We notified a reduction in container initialization times due to localized image retrieval from proxy repositories, improving application startup performance.
+4. **Enhanced performance** - We noticed a reduction in container initialization times due to localized image retrieval from proxy repositories, improving application startup performance.
 
 5. **Registry independence** - By implementing proxies for multiple registries, our clients' infrastructure is now insulated from policy or pricing changes at any single registry provider.
 
