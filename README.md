@@ -1,6 +1,6 @@
-# Mitigating Docker Hub Rate Limitations and Crossplane Package Restrictions with Registry Proxies
+# Mitigating Docker Hub rate limitations and Crossplane package restrictions with registry proxies
 
-## The Challenge
+## The challenge
 
 In early 2025, Docker Hub announced a significant policy change: unauthenticated users would be limited to 10 image pulls per hour starting April 1st. This change introduced substantial constraints for development and production environments worldwide. Although the policy was not enforced, it was clear that it would be reinstated at some point in the future. More details can be found in [Docker's blog](https://www.docker.com/blog/revisiting-docker-hub-policies-prioritizing-developer-experience).
 
@@ -14,7 +14,7 @@ For Kubernetes-based infrastructure with frequent scaling operations and spot in
 
 While Docker Hub had not yet fully enforced their policy, it was clear that proactive measures were necessary to prevent potential disruptions to critical infrastructure services.
 
-## Our Approach
+## Our approach
 
 After analyzing the situation, we established several key requirements for an effective solution:
 
@@ -25,7 +25,7 @@ After analyzing the situation, we established several key requirements for an ef
 
 Additionally, any implemented solution needed to maintain transparency to client applications and minimize operational overhead for infrastructure teams.
 
-## The Solution: Registry Proxies
+## The solution: registry proxies
 
 Our engineering team designed and implemented a registry proxy architecture that acts as an intermediary layer between client infrastructure and external image repositories. These proxies cache images locally after the first pull, effectively eliminating rate limits for subsequent requests.
 
@@ -35,7 +35,7 @@ This approach provides three primary benefits:
 2. **Enhanced resilience** - Infrastructure continues operating even during external registry outages
 3. **Version preservation** - Critical services maintain access to specific Crossplane package versions despite upstream restrictions
 
-### AWS ECR Pull-Through Cache Implementation
+### AWS ECR pull-through cache implementation
 
 For AWS environments, we leveraged Amazon ECR's pull-through cache functionality to automatically retrieve and store images from upstream registries upon initial request:
 
@@ -102,7 +102,7 @@ resource "aws_secretsmanager_secret_version" "ecr_proxy_ghcr" {
 
 resource "aws_ecr_pull_through_cache_rule" "hub" {
   count = var.hub_username != "" && var.hub_token != "" ? 1 : 0
-  ecr_repository_prefix = "ecr-proxy-hub"
+  ecr_repository_prefix = "hub-proxy"
   upstream_registry_url = "registry-1.docker.io"
   credential_arn        = aws_secretsmanager_secret.ecr_pullthroughcache_hub[0].arn
   depends_on = [
@@ -112,7 +112,7 @@ resource "aws_ecr_pull_through_cache_rule" "hub" {
 
 resource "aws_ecr_pull_through_cache_rule" "ghcr" {
   count = var.ghcr_username != "" && var.ghcr_token != "" ? 1 : 0
-  ecr_repository_prefix = "ecr-proxy-ghcr"
+  ecr_repository_prefix = "ghcr-proxy"
   upstream_registry_url = "ghcr.io"
   credential_arn        = aws_secretsmanager_secret.ecr_pullthroughcache_ghcr[0].arn
   depends_on = [
@@ -171,7 +171,7 @@ output "ghcr_registry" {
 
 ```
 
-### Google Artifact Registry remote repository configuration example
+### Example Google Artifact Registry remote repository configuration
 
 For Google Cloud environments, we configured Artifact Registry to establish remote repositories functioning as proxies for Docker Hub:
 
@@ -267,9 +267,9 @@ output "ghcr_registry" {
 
 Our implementation extends beyond Docker Hub to include proxies for other critical container registries such as Quay.io, GitHub Container Registry (ghcr.io). This comprehensive approach ensures protection against rate limits and service disruptions.
 
-### Kubernetes Manifest Updates
+### Helm chart updates
 
-We updated Helm charts and Kubernetes manifests to reference container images through our established proxies:
+We updated Helm charts to reference container images through our established proxies:
 
 **AWS ECR reference format:**
 
