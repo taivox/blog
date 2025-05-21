@@ -177,6 +177,23 @@ output "ghcr_registry" {
 For Google Cloud environments, we configured Artifact Registry to establish remote repositories functioning as proxies for Docker Hub:
 
 ```terraform
+# Export environment variables
+# export GOOGLE_PROJECT=<replace-with-your-project-id>
+# export GOOGLE_REGION=<replace-with-your-region>
+# export GOOGLE_ZONE=<replace-with-your-zone>
+
+# Provider
+terraform {
+  required_version = ">= 1.5"
+  required_providers {
+    google = {
+      source  = "hashicorp/google"
+      version = "6.36.0"
+    }
+  }
+}
+
+# Variables
 variable "hub_username_secret" {
   description = "Secret Manager secret name for Docker Hub username"
   type        = string
@@ -201,6 +218,7 @@ variable "ghcr_access_token_secret" {
   default     = ""
 }
 
+# Data
 data "google_project" "this" {}
 
 data "google_client_config" "this" {}
@@ -215,14 +233,20 @@ data "google_secret_manager_secret_version_access" "gar_proxy_access_token" {
   secret   = each.value.access_token_secret
 }
 
+# Locals
 locals {
   registries = {
-    hub  = { uri = "registry-1.docker.io", username_secret = var.hub_username_secret, access_token_secret = var.hub_access_token_secret }
-    ghcr = { uri = "ghcr.io", username_secret = var.ghcr_username_secret, access_token_secret = var.ghcr_access_token_secret }
+    hub-proxy  = { uri = "registry-1.docker.io", username_secret = var.hub_username_secret, access_token_secret = var.hub_access_token_secret }
+    ghcr-proxy = { uri = "ghcr.io", username_secret = var.ghcr_username_secret, access_token_secret = var.ghcr_access_token_secret }
   }
   registries_with_credentials = { for k, v in local.registries : k => v if v.username_secret != "" && v.access_token_secret != "" }
+
+  registry_url_format = "${data.google_client_config.this.region}-docker.pkg.dev/${data.google_client_config.this.project}/%s/"
+
+  registry_urls = { for k, v in google_artifact_registry_repository.gar_proxy : k => format(local.registry_url_format, v.repository_id) }
 }
 
+# Resources
 resource "google_secret_manager_secret_iam_member" "gar_proxy" {
   for_each  = local.registries_with_credentials
   secret_id = each.value.access_token_secret
@@ -252,16 +276,25 @@ resource "google_artifact_registry_repository" "gar_proxy" {
       }
     }
   }
+
+  cleanup_policies {
+    id     = "delete-all-older-than-90d"
+    action = "DELETE"
+    condition {
+      older_than = "90d"
+    }
+  }
 }
 
+# Outputs
 output "hub_registry" {
-  description = "Docker Hub proxy "
-  value = "${data.google_client_config.this.region}-docker.pkg.dev/${data.google_client_config.this.project}/${google_artifact_registry_repository.gar_proxy["hub"].repository_id}"
+  description = "Docker Hub proxy"
+  value       = local.registry_urls["hub-proxy"]
 }
 
 output "ghcr_registry" {
   description = "GitHub Container Registry proxy"
-  value = "${data.google_client_config.this.region}-docker.pkg.dev/${data.google_client_config.this.project}/${google_artifact_registry_repository.gar_proxy["ghcr"].repository_id}"
+  value       = local.registry_urls["ghcr-proxy"]
 }
 
 ```
