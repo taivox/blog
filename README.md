@@ -8,7 +8,7 @@ At the same time, Upbound implemented a policy restricting free users to pulling
 
 For Kubernetes-based infrastructure with frequent scaling operations and spot instance usage, these policy changes presented significant operational risks. Our analysis indicated that clients would exceed these limitations within minutes during standard operations:
 
-- A cluster with 20 nodes requiring 5 images each = 100 pulls.
+- A cluster with 10 nodes requiring 10 images each = 100 pulls.
 - Node replacements resulting from spot instance recycling = additional pulls for new nodes.
 - GitLab CI/CD pipelines on Kubernetes runners = further pulls against the quota.
 
