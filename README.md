@@ -40,134 +40,106 @@ This approach provides three primary benefits:
 For AWS environments, we leveraged Amazon ECR's pull-through cache functionality to automatically retrieve and store images from upstream registries upon initial request:
 
 ```terraform
-variable "hub_username" {
-  type = string
-  sensitive   = true
-  default = ""
+# Export environment variables
+# export AWS_ACCESS_KEY_ID=<your-aws-access-key-id>
+# export AWS_SECRET_ACCESS_KEY=<your-aws-secret-access-key>
+# export AWS_SESSION_TOKEN=<your-aws-session-token>
+# export AWS_REGION=<your-aws-region>
+
+# Provider
+terraform {
+  required_version = ">= 1.5"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "5.98.0"
+    }
+  }
 }
 
-variable "hub_token" {
-  type = string
-  sensitive   = true
-  default = ""
+# Example Secret Manager secret structure
+# { "username": "<your-username>", "accessToken": "<your-access-token>" }
+
+# Variables
+variable "hub_credentials_secret" {
+  description = "Secret Manager secret name for Docker Hub credentials"
+  type        = string
+  default     = "ecr-pullthroughcache/hub"
 }
 
-variable "ghcr_username" {
-  type = string
-  sensitive   = true
-  default = ""
+variable "ghcr_credentials_secret" {
+  description = "Secret Manager secret name for GitHub Container Registry credentials"
+  type        = string
+  default     = "ecr-pullthroughcache/ghcr"
 }
 
-variable "ghcr_token" {
-  type = string
-  sensitive   = true
-  default = ""
-}
-
+# Data
 data "aws_region" "this" {}
 
 data "aws_caller_identity" "this" {}
 
+data "aws_secretsmanager_secret" "credentials" {
+  for_each = local.registries
+  name     = each.value.credentials_secret
+}
+
+# Locals
 locals {
-  hub = {
-    username = var.hub_username
-    accessToken = var.hub_token
+  registries = {
+    hub-proxy  = { upstream_registry_url = "registry-1.docker.io", credentials_secret = var.hub_credentials_secret, description = "Docker Hub" }
+    ghcr-proxy = { upstream_registry_url = "ghcr.io", credentials_secret = var.ghcr_credentials_secret, description = "GitHub Container Registry" }
   }
-  ghcr = {
-    username = var.ghcr_username
-    accessToken = var.ghcr_token
+
+  registry_urls = {
+    for k, _ in local.registries : k => "${data.aws_caller_identity.this.account_id}.dkr.ecr.${data.aws_region.this.name}.amazonaws.com/${k}/"
   }
 }
 
-resource "aws_secretsmanager_secret" "ecr_proxy_hub" {
-  count = var.hub_username != "" && var.hub_token != "" ? 1 : 0
-  name = "hub-proxy"
-}
-
-resource "aws_secretsmanager_secret_version" "ecr_proxy_hub" {
-  count = var.hub_username != "" && var.hub_token != "" ? 1 : 0
-  secret_id     = aws_secretsmanager_secret.ecr_proxy_hub[0].id
-  secret_string = jsonencode(local.hub)
-}
-
-resource "aws_secretsmanager_secret" "ecr_proxy_ghcr" {
-  count = var.ghcr_username != "" && var.ghcr_token != "" ? 1 : 0
-  name = "ecr-pullthroughcache/ghcr"
-}
-
-resource "aws_secretsmanager_secret_version" "ecr_proxy_ghcr" {
-  count = var.ghcr_username != "" && var.ghcr_token != "" ? 1 : 0
-  secret_id     = aws_secretsmanager_secret.ecr_proxy_ghcr[0].id
-  secret_string = jsonencode(local.ghcr)
-}
-
-resource "aws_ecr_pull_through_cache_rule" "hub" {
-  count = var.hub_username != "" && var.hub_token != "" ? 1 : 0
-  ecr_repository_prefix = "hub-proxy"
-  upstream_registry_url = "registry-1.docker.io"
-  credential_arn        = aws_secretsmanager_secret.ecr_pullthroughcache_hub[0].arn
-  depends_on = [
-    aws_secretsmanager_secret_version.ecr_pullthroughcache_hub
-  ]
-}
-
-resource "aws_ecr_pull_through_cache_rule" "ghcr" {
-  count = var.ghcr_username != "" && var.ghcr_token != "" ? 1 : 0
-  ecr_repository_prefix = "ghcr-proxy"
-  upstream_registry_url = "ghcr.io"
-  credential_arn        = aws_secretsmanager_secret.ecr_pullthroughcache_ghcr[0].arn
-  depends_on = [
-    aws_secretsmanager_secret_version.ecr_pullthroughcache_ghcr
-  ]
+resource "aws_ecr_pull_through_cache_rule" "ecr_proxy" {
+  for_each              = local.registries
+  ecr_repository_prefix = each.key
+  upstream_registry_url = each.value.upstream_registry_url
+  credential_arn        = data.aws_secretsmanager_secret.credentials[each.key].arn
 }
 
 resource "aws_ecr_repository_creation_template" "ecr_proxy" {
-  for_each = toset(["hub", "ghcr"])
-  prefix               = each.value
-  description          = each.value
+  for_each             = local.registries
+  prefix               = each.key
+  description          = each.value.description
+  image_tag_mutability = "MUTABLE"
+
   applied_for = [
     "PULL_THROUGH_CACHE",
   ]
-}
 
-resource "aws_iam_policy" "ecr_proxy" {
-  name        = "ecr-proxy"
-  path        = "/"
-  description = "ECR usage"
-  policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
+  lifecycle_policy = jsonencode({
+    rules = [
       {
-        Action = [
-                "ecr:GetAuthorizationToken",
-                "ecr:BatchCheckLayerAvailability",
-                "ecr:GetDownloadUrlForLayer",
-                "ecr:DescribeRepositories",
-                "ecr:ListImages",
-                "ecr:DescribeImages",
-                "ecr:BatchGetImage",
-                "ecr:ListTagsForResource",
-                "ecr:DescribeImageScanFindings",
-                "ecr:ReplicateImage",
-                "ecr:CreateRepository",
-                "ecr:BatchImportUpstreamImage",
-                "ecr:TagResource"
-        ]
-        Effect   = "Allow"
-        Resource = "arn:aws:ecr:${data.aws_region.this.name}:${data.aws_caller_identity.this.account_id}:repository/*"
-      },
+        rulePriority = 1,
+        description  = "Expire all images older than 90 days",
+        selection = {
+          tagStatus   = "any",
+          countType   = "sinceImagePushed",
+          countUnit   = "days",
+          countNumber = 90
+        },
+        action = {
+          type = "expire"
+        }
+      }
     ]
   })
 }
 
+# Outputs
 output "hub_registry" {
-  description = "Registry URL for docker hub"
-  value       = var.hub_username != "" && var.hub_token != "" ? "${data.aws_caller_identity.this.account_id}.dkr.ecr.${data.aws_region.this.name}.amazonaws.com/${aws_ecr_pull_through_cache_rule.hub[0].ecr_repository_prefix}" : null
+  description = "Docker Hub proxy URL"
+  value       = local.registry_urls["hub-proxy"]
 }
 
 output "ghcr_registry" {
-  description = "Registry URL for ghcr"
-  value       = var.ghcr_username != "" && var.ghcr_token != "" ? "${data.aws_caller_identity.this.account_id}.dkr.ecr.${data.aws_region.this.name}.amazonaws.com/${aws_ecr_pull_through_cache_rule.ghcr[0].ecr_repository_prefix}" : null
+  description = "GitHub Container Registry proxy URL"
+  value       = local.registry_urls["ghcr-proxy"]
 }
 
 ```
@@ -236,8 +208,8 @@ data "google_secret_manager_secret_version_access" "gar_proxy_access_token" {
 # Locals
 locals {
   registries = {
-    hub-proxy  = { uri = "registry-1.docker.io", username_secret = var.hub_username_secret, access_token_secret = var.hub_access_token_secret }
-    ghcr-proxy = { uri = "ghcr.io", username_secret = var.ghcr_username_secret, access_token_secret = var.ghcr_access_token_secret }
+    hub-proxy  = { uri = "registry-1.docker.io", username_secret = var.hub_username_secret, access_token_secret = var.hub_access_token_secret, description = "Docker Hub proxy" }
+    ghcr-proxy = { uri = "ghcr.io", username_secret = var.ghcr_username_secret, access_token_secret = var.ghcr_access_token_secret, description = "GitHub Container Registry proxy" }
   }
   registries_with_credentials = { for k, v in local.registries : k => v if v.username_secret != "" && v.access_token_secret != "" }
 
@@ -258,6 +230,7 @@ resource "google_artifact_registry_repository" "gar_proxy" {
   for_each      = local.registries
   depends_on    = [google_secret_manager_secret_iam_member.gar_proxy]
   repository_id = each.key
+  description   = each.value.description
   format        = "DOCKER"
   mode          = "REMOTE_REPOSITORY"
 
