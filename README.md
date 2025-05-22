@@ -35,7 +35,7 @@ This approach provides three primary benefits:
 2. **Enhanced resilience** - Infrastructure continues operating even during external registry outages.
 3. **Version preservation** - Critical services maintain access to specific Crossplane package versions despite upstream restrictions.
 
-### AWS ECR pull-through cache implementation
+### AWS ECR pull-through cache implementation example
 
 For AWS environments, we leveraged Amazon ECR's pull-through cache functionality to automatically retrieve and store images from upstream registries upon initial request:
 
@@ -144,7 +144,7 @@ output "ghcr_registry" {
 
 ```
 
-### Example Google Artifact Registry remote repository configuration
+### Google Artifact Registry remote repository configuration example
 
 For Google Cloud environments, we configured Artifact Registry to establish remote repositories functioning as proxies for Docker Hub:
 
