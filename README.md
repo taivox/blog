@@ -95,6 +95,7 @@ locals {
   }
 }
 
+# Resources
 resource "aws_ecr_pull_through_cache_rule" "ecr_proxy" {
   for_each              = local.registries
   ecr_repository_prefix = each.key
