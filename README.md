@@ -2,7 +2,7 @@
 
 ## The challenge
 
-Imagine your production Kubernetes cluster grinding to a halt because you've exceeded 10 image pulls in an hour. That's the reality we faced when Docker Hub announced their new rate limits in early 2025. More details can be found in [Docker's blog](https://www.docker.com/blog/revisiting-docker-hub-policies-prioritizing-developer-experience) and [Docker's official documentation](https://docs.docker.com/docker-hub/usage/).
+Imagine your production Kubernetes cluster grinding to a halt because you've exceeded 10 image pulls in an hour. That's the reality we faced when Docker Hub announced their new rate limits in early 2025. More details can be found in [Docker's official documentation](https://docs.docker.com/docker-hub/usage/).
 
 Around the same time, Upbound announced a policy restricting free users to pulling only the latest Crossplane package versions as of March 25th, limiting access to older versions that many production workflows depend upon. The policy is documented in [Upbound's official documentation](https://docs.upbound.io/providers/policies/#access).
 
