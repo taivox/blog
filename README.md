@@ -25,6 +25,10 @@ We sat down and asked ourselves: what do we actually need to solve this?
 
 Whatever we built had to be invisible to applications and easy for infrastructure teams to manage.
 
+### Why not just pay for Docker Hub and Upbound?
+
+We considered getting paid accounts for both services, but that wouldn't defend us from registry outages - when Docker Hub or Upbound goes down, paid customers go down with them. Plus, the costs would be significant across our clients with multiple clusters each. We needed something that gave us full control and true resilience.
+
 ## The solution: registry proxies
 
 We built registry proxies - smart middlemen that sit between your infrastructure and external registries. These proxies cache images locally after the first pull, effectively eliminating rate limits for subsequent requests.
