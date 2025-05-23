@@ -6,7 +6,7 @@ Imagine your production Kubernetes cluster grinding to a halt because you've exc
 
 Around the same time, Upbound announced a policy restricting free users to pulling only the latest Crossplane package versions as of March 25th, limiting access to older versions that many production workflows depend upon. The policy is documented in [Upbound's official documentation](https://docs.upbound.io/providers/policies/#access).
 
-While Docker temporarily paused their policy, smart teams are preparing now rather than scrambling when it inevitably returns. The Upbound restrictions remain in effect, and who knows what's next?"
+While Docker temporarily paused their policy, smart teams are preparing now rather than scrambling when it inevitably returns. The Upbound restrictions remain in effect, and who knows what's next?
 
 If you're running Kubernetes with frequent scaling and spot instances like our clients do, these changes meant significant operational risks. We ran the numbers and realized our clients would inevitably exceed these limits during standard operations:
 
@@ -44,107 +44,10 @@ Here's what you get with this approach:
 For AWS environments, we used Amazon ECR's pull-through cache functionality to automatically retrieve and store images from upstream registries upon initial request:
 
 ```terraform
-# Export environment variables
-# export AWS_ACCESS_KEY_ID=<your-aws-access-key-id>
-# export AWS_SECRET_ACCESS_KEY=<your-aws-secret-access-key>
-# export AWS_SESSION_TOKEN=<your-aws-session-token>
-# export AWS_REGION=<your-aws-region>
 
-# Provider
-terraform {
-  required_version = ">= 1.5"
-  required_providers {
-    aws = {
-      source  = "hashicorp/aws"
-      version = "5.98.0"
-    }
-  }
-}
-
-# Example Secret Manager secret structure
-# { "username": "<your-username>", "accessToken": "<your-access-token>" }
-
-# Variables
-variable "hub_credentials_secret" {
-  description = "Secret Manager secret name for Docker Hub credentials"
-  type        = string
-  default     = "ecr-pullthroughcache/hub"
-}
-
-variable "ghcr_credentials_secret" {
-  description = "Secret Manager secret name for GitHub Container Registry credentials"
-  type        = string
-  default     = "ecr-pullthroughcache/ghcr"
-}
-
-# Data
-data "aws_region" "this" {}
-
-data "aws_caller_identity" "this" {}
-
-data "aws_secretsmanager_secret" "credentials" {
-  for_each = local.registries
-  name     = each.value.credentials_secret
-}
-
-# Locals
-locals {
-  registries = {
-    hub-proxy  = { upstream_registry_url = "registry-1.docker.io", credentials_secret = var.hub_credentials_secret, description = "Docker Hub" }
-    ghcr-proxy = { upstream_registry_url = "ghcr.io", credentials_secret = var.ghcr_credentials_secret, description = "GitHub Container Registry" }
-  }
-
-  registry_urls = {
-    for k, _ in local.registries : k => "${data.aws_caller_identity.this.account_id}.dkr.ecr.${data.aws_region.this.name}.amazonaws.com/${k}/"
-  }
-}
-
-# Resources
-resource "aws_ecr_pull_through_cache_rule" "ecr_proxy" {
-  for_each              = local.registries
-  ecr_repository_prefix = each.key
-  upstream_registry_url = each.value.upstream_registry_url
-  credential_arn        = data.aws_secretsmanager_secret.credentials[each.key].arn
-}
-
-resource "aws_ecr_repository_creation_template" "ecr_proxy" {
-  for_each             = local.registries
-  prefix               = each.key
-  description          = each.value.description
-  image_tag_mutability = "MUTABLE"
-
-  applied_for = [
-    "PULL_THROUGH_CACHE",
-  ]
-
-  lifecycle_policy = jsonencode({
-    rules = [
-      {
-        rulePriority = 1,
-        description  = "Expire all images older than 90 days",
-        selection = {
-          tagStatus   = "any",
-          countType   = "sinceImagePushed",
-          countUnit   = "days",
-          countNumber = 90
-        },
-        action = {
-          type = "expire"
-        }
-      }
-    ]
-  })
-}
-
-# Outputs
-output "hub_registry" {
-  description = "Docker Hub proxy URL"
-  value       = local.registry_urls["hub-proxy"]
-}
-
-output "ghcr_registry" {
-  description = "GitHub Container Registry proxy URL"
-  value       = local.registry_urls["ghcr-proxy"]
+variable "example" {
+  type = string
+  default = "hello-world"
 }
 
 ```
