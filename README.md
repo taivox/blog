@@ -174,25 +174,25 @@ terraform {
 variable "hub_username_secret" {
   description = "Secret Manager secret name for Docker Hub username"
   type        = string
-  default     = ""
+  default     = "gar-proxy-hub-username"
 }
 
 variable "hub_access_token_secret" {
   description = "Secret Manager secret name for Docker Hub access token"
   type        = string
-  default     = ""
+  default     = "gar-proxy-hub-access-token"
 }
 
 variable "ghcr_username_secret" {
   description = "Secret Manager secret name for GitHub Container Registry username"
   type        = string
-  default     = ""
+  default     = "gar-proxy-ghcr-username"
 }
 
 variable "ghcr_access_token_secret" {
   description = "Secret Manager secret name for GitHub Container Registry access token"
   type        = string
-  default     = ""
+  default     = "gar-proxy-ghcr-access-token"
 }
 
 # Data
